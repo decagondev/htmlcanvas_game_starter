@@ -1,72 +1,62 @@
-class Player {
-    constructor(x, y, width, height, color) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.color = color;
-        this.speed = 4; 
-        this.velX = 0; 
-        this.velY = 0;
-    }
+const canvas = document.getElementById('myCanvas');
+const ctx = canvas.getContext('2d');
+const resolution = 10;
+const rows = canvas.height / resolution;
+const cols = canvas.width / resolution;
 
-    draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-    }
+let grid = buildGrid();
+requestAnimationFrame(update);
 
-    update() {
-        this.x += this.velX;
-        this.y += this.velY;
-    }
-
-    move(dx, dy) {
-        this.velX = dx * this.speed;
-        this.velY = dy * this.speed;
-    }
-
-    stop() {
-        this.velX = 0;
-        this.velY = 0;
-    }
+function buildGrid() {
+  return new Array(cols).fill(null)
+    .map(() => new Array(rows).fill(null).map(() => Math.floor(Math.random() * 2)));
 }
 
-
-var canvas = document.getElementById("myCanvas");
-
-var ctx = canvas.getContext("2d");
-
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-
-var player = new Player(20, 20, 20, 20, "#FF0000");
-
-var keysPressed = {};
-document.addEventListener("keydown", function(event) {
-    keysPressed[event.key] = true;
-    updatePlayerVelocity();
-});
-
-document.addEventListener("keyup", function(event) {
-    delete keysPressed[event.key];
-    updatePlayerVelocity();
-});
-
-function updatePlayerVelocity() {
-    player.velX = (keysPressed['ArrowRight'] ? player.speed : 0) - (keysPressed['ArrowLeft'] ? player.speed : 0);
-    player.velY = (keysPressed['ArrowDown'] ? player.speed : 0) - (keysPressed['ArrowUp'] ? player.speed : 0);
+function update() {
+  drawGrid();
+  grid = nextGeneration();
+  requestAnimationFrame(update);
 }
 
-function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function nextGeneration() {
+  const nextGen = grid.map(arr => [...arr]);
 
-    player.update();
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const state = grid[i][j];
+      let neighbors = 0;
 
-    player.draw(ctx);
+      for (let x = -1; x < 2; x++) {
+        for (let y = -1; y < 2; y++) {
+          const col = (i + x + cols) % cols;
+          const row = (j + y + rows) % rows;
+          neighbors += grid[col][row];
+        }
+      }
+      neighbors -= state;
 
-    requestAnimationFrame(gameLoop);
+      if (state === 1 && (neighbors < 2 || neighbors > 3)) {
+        nextGen[i][j] = 0;
+      } else if (state === 0 && neighbors === 3) {
+        nextGen[i][j] = 1;
+      }
+    }
+  }
+
+  return nextGen;
 }
 
-gameLoop();
+function drawGrid() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const x = i * resolution;
+      const y = j * resolution;
+      if (grid[i][j] === 1) {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(x, y, resolution, resolution);
+      }
+    }
+  }
+}
